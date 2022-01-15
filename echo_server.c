@@ -27,8 +27,6 @@ int main(int argc, char* argv[]) {
 
 // 新建连接回调
 void new_conn_callback(uv_stream_t* server, int status) {
-    printf("New client connected\n");
-
     assert(server == (uv_stream_t*)&g_server);
     if (status < 0) {
         fprintf(stderr, "new connection err: %s\n", uv_strerror(status));
@@ -40,6 +38,7 @@ void new_conn_callback(uv_stream_t* server, int status) {
     uv_tcp_init(g_loop, client);
 
     if (uv_accept(server, (uv_stream_t*) client) == 0) {
+        printf("New client connected\n");
         uv_read_start((uv_stream_t*) client, alloc_callback, read_callback);
     } else {
         uv_close((uv_handle_t *) client, close_callback);
@@ -48,15 +47,14 @@ void new_conn_callback(uv_stream_t* server, int status) {
 
 // tcp数据放到buf上的回调
 void alloc_callback(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
-    buf->base = (char*) malloc(suggested_size);
-    buf->len = suggested_size;
+    *buf = uv_buf_init(malloc(suggested_size), suggested_size);
 }
 
 static const char* write_prefix = "You write: ";
 
 // 读取tcp数据后的回调
 void read_callback(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
-    if (nread >= 0) {
+    if (nread > 0) {
         size_t prefix_len = strlen(write_prefix);
         char* write_content = (char*)malloc(sizeof(char) * (prefix_len + nread + 1));
         strcpy(write_content, write_prefix);
